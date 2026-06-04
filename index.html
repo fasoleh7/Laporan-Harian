@@ -72,11 +72,15 @@
         .timeline-item { position: relative; margin-bottom: 24px; }
         .timeline-item:last-child { margin-bottom: 0; }
         .timeline-dot { position: absolute; left: -25px; top: 4px; width: 12px; height: 12px; background: var(--primary); border-radius: 50%; border: 3px solid var(--card-bg); box-shadow: 0 0 0 1px var(--primary); }
-        .timeline-date { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; display: flex; gap: 12px; }
+        .timeline-date { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+        .timeline-date-info { display: flex; gap: 12px; align-items: center; }
         .timeline-content { background: var(--bg-color); padding: 12px 16px; border-radius: 0 12px 12px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.03); }
         .timeline-content p { margin-bottom: 6px; line-height: 1.5; }
         .timeline-meta { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; font-weight: 500; color: var(--text-muted); }
         .meta-item i { color: var(--primary); margin-right: 4px; }
+
+        /* Badge Status */
+        .status-badge { padding: 3px 8px; border-radius: 4px; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 
         /* Pesan Kosong */
         .empty-state { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 15px; padding: 20px; background: var(--bg-color); border-radius: 8px;}
@@ -97,7 +101,7 @@
         <div id="reader-card" class="card">
             <div id="reader" style="width: 100%;"></div>
             <div class="manual-input-container">
-                <p class="manual-input-label">Ketik ID Mesin atau No. Mesin:</p>
+                <p class="manual-input-label">Ketik ID Mesin atau Kode Mesin Lama/Baru:</p>
                 <div class="input-group">
                     <input type="text" id="manual-input" placeholder="Contoh: P-070 atau C02" autocomplete="off">
                     <button onclick="cariManual()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
@@ -165,17 +169,15 @@
         let riwayatMesinAktif = []; 
 
         function fetchDataFromSheet() {
-            // Ambil Data Laporan Harian
             Papa.parse(sheetLaporanUrl, {
                 download: true,
                 header: true,
-                transformHeader: function(h) { return h.trim(); }, // ANTI SPASI TERSESAT
+                transformHeader: function(h) { return h.trim(); }, 
                 complete: function(results) {
                     dataLaporanGlobal = results.data;
                 }
             });
 
-            // Ambil Data Master Mesin (Spesifikasi)
             Papa.parse(sheetMasterMesinUrl, {
                 download: true,
                 header: true,
@@ -225,7 +227,6 @@
             const searchText = qrText.trim().toUpperCase();
             const cleanText = (text) => (!text || text.trim() === '') ? '-' : text;
 
-            // 1. Cari Spesifikasi di Data Master (NIK_Mesin) - Bisa dari ID, Lama, atau Baru
             let infoMaster = null;
             if (dataMasterGlobal.length > 0) {
                 infoMaster = dataMasterGlobal.find(row => {
@@ -236,7 +237,6 @@
                 });
             }
 
-            // 2. Cari Riwayat di Laporan Harian
             const riwayatMentah = dataLaporanGlobal.filter(row => {
                 const idMesin = row['ID Mesin'] ? row['ID Mesin'].trim().toUpperCase() : '';
                 const noMesin = row['No. Mesin'] ? row['No. Mesin'].trim().toUpperCase() : '';
@@ -249,24 +249,15 @@
                 return;
             }
 
-            // ============================================
-            // TAMPILKAN HEADER SPESIFIKASI MESIN
-            // ============================================
             if (infoMaster) {
                 document.getElementById('res-id-lokasi').innerText = cleanText(infoMaster['ID Lokasi']);
-                
-                // HANYA TAMPILKAN KODE YANG BARU
                 document.getElementById('res-no-mesin').innerText = cleanText(infoMaster['Baru']);
-                
                 document.getElementById('res-nama').innerText = cleanText(infoMaster['Nama Mesin']);
                 document.getElementById('res-tonase').innerText = cleanText(infoMaster['Tonase']);
-                
-                // Mengakomodasi nama header "Serial Number" atau "SN"
                 const serialNum = infoMaster['Serial Number'] || infoMaster['SN'] || '-';
                 document.getElementById('res-sn').innerText = cleanText(serialNum);
                 document.getElementById('res-spesifikasi').innerText = cleanText(infoMaster['Spesifikasi']);
             } else {
-                // Fallback (jika data master gagal, setidaknya ambil dari riwayat harian)
                 document.getElementById('res-id-lokasi').innerText = cleanText(riwayatMentah[0]['ID Mesin']);
                 document.getElementById('res-no-mesin').innerText = cleanText(riwayatMentah[0]['No. Mesin']);
                 document.getElementById('res-nama').innerText = cleanText(riwayatMentah[0]['Nama Mesin']);
@@ -275,9 +266,6 @@
                 document.getElementById('res-sn').innerText = '-';
             }
 
-            // ============================================
-            // TAMPILKAN TIMELINE RIWAYAT
-            // ============================================
             riwayatMesinAktif = riwayatMentah.filter(item => {
                 const problem = item['Problem Mesin'] ? item['Problem Mesin'].toUpperCase() : '';
                 const tanggal = item['Tanggal'] ? item['Tanggal'].toUpperCase() : '';
@@ -344,13 +332,33 @@
                     const tindakan = cleanText(item['Perbaikan Mesin']);
                     const teknisi = cleanText(item['Nama']); 
                     const sparepart = cleanText(item['Pergantian Spare Part']); 
+                    
+                    // MENGAMBIL STATUS (Mengakomodasi typo 'Statur' dari Excel)
+                    const statusVal = cleanText(item['Status'] || item['Statur']);
+                    
+                    // MENENTUKAN WARNA STATUS
+                    let statusBg = '#f1f5f9'; // Default abu-abu
+                    let statusColor = '#475569';
+                    
+                    if (statusVal.toUpperCase() === 'OK') {
+                        statusBg = '#d1fae5'; // Hijau muda
+                        statusColor = '#065f46'; // Hijau tua
+                    } else if (statusVal !== '-') {
+                        statusBg = '#fef3c7'; // Kuning muda
+                        statusColor = '#92400e'; // Oranye gelap
+                    }
 
                     riwayatContainer.innerHTML += `
                         <div class="timeline-item">
                             <div class="timeline-dot"></div>
                             <div class="timeline-date">
-                                <span><i class="fa-regular fa-calendar-days"></i> ${tanggal}</span>
-                                <span><i class="fa-regular fa-clock"></i> ${mulai} - ${selesai}</span>
+                                <div class="timeline-date-info">
+                                    <span><i class="fa-regular fa-calendar-days"></i> ${tanggal}</span>
+                                    <span><i class="fa-regular fa-clock"></i> ${mulai} - ${selesai}</span>
+                                </div>
+                                <span class="status-badge" style="background-color: ${statusBg}; color: ${statusColor};">
+                                    ${statusVal}
+                                </span>
                             </div>
                             <div class="timeline-content">
                                 <p><strong>Kendala:</strong> ${kendala}</p>
