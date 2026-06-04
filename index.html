@@ -46,10 +46,8 @@
     </div>
 
     <script>
-        // =========================================================
-        // WAJIB GANTI LINK DI BAWAH DENGAN LINK CSV GOOGLE SHEETS ANDA
-        // =========================================================
-        const sheetCSVUrl = "PASTE_LINK_CSV_GOOGLE_SHEETS_DI_SINI";
+        // Link CSV Google Sheets yang sudah disesuaikan
+        const sheetCSVUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHsIF5lFos4c1YZF3dBwT5C61GH3ZYIdwYBte2TY79FQ3GfV7DEA5y3mti_kDPdA/pub?gid=348491996&single=true&output=csv";
 
         let html5QrcodeScanner = null;
         let dataMesinGlobal = []; 
@@ -90,7 +88,7 @@
         function prosesDataScan(qrText) {
             // Filter data berdasarkan NO. MESIN
             const riwayatMesinIni = dataMesinGlobal.filter(row => {
-                return row['NO. MESIN'] && row['NO. MESIN'].toUpperCase() === qrText.toUpperCase();
+                return row['NO. MESIN'] && row['NO. MESIN'].toUpperCase() === qrText.trim().toUpperCase();
             });
 
             if (riwayatMesinIni.length > 0) {
@@ -117,7 +115,7 @@
 
                 document.getElementById('result-card').classList.remove('hidden');
             } else {
-                alert(`Riwayat untuk mesin ${qrText} belum ada di database!`);
+                alert(`Riwayat untuk mesin ${qrText} belum ada di database! Pastikan QR Code sesuai dengan No. Mesin di Excel.`);
                 resetScanner();
             }
         }
