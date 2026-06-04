@@ -76,7 +76,9 @@
         .timeline-date-info { display: flex; gap: 12px; align-items: center; }
         .timeline-content { background: var(--bg-color); padding: 12px 16px; border-radius: 0 12px 12px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.03); }
         .timeline-content p { margin-bottom: 6px; line-height: 1.5; }
-        .timeline-meta { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; font-weight: 500; color: var(--text-muted); }
+        
+        /* Modifikasi Timeline Meta agar bisa turun ke baris baru kalau namanya panjang */
+        .timeline-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; font-weight: 500; color: var(--text-muted); }
         .meta-item i { color: var(--primary); margin-right: 4px; }
 
         /* Badge Status */
@@ -88,6 +90,19 @@
         /* Buttons */
         .btn-reset { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; margin-top: 25px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
         .btn-reset:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
+
+        /* =========================================
+           STYLE IKLAN QRIS 
+           ========================================= */
+        .qris-card { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; border-radius: 12px; padding: 15px; margin-top: 30px; position: relative; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(37,99,235,0.05); transition: opacity 0.3s ease; }
+        .close-qris { position: absolute; top: 6px; right: 8px; background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 14px; padding: 4px; }
+        .close-qris:hover { color: #ef4444; }
+        .qris-text { flex: 1; }
+        .qris-text h4 { font-size: 13px; font-weight: 700; color: #1e3a8a; margin-bottom: 4px; display: flex; align-items: center; gap: 6px; }
+        .qris-text h4 i { color: #d97706; }
+        .qris-text p { font-size: 11px; color: #334155; line-height: 1.4; }
+        .qris-image { flex-shrink: 0; }
+        .qris-image img { width: 70px; height: 70px; border-radius: 8px; object-fit: contain; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #fff; }
     </style>
 </head>
 <body>
@@ -155,13 +170,24 @@
                 <i class="fa-solid fa-camera"></i> Cari Mesin Lainnya
             </button>
         </div>
+
+        <div class="qris-card" id="qris-ad">
+            <button class="close-qris" onclick="document.getElementById('qris-ad').style.display='none'" title="Tutup">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="qris-text">
+                <h4><i class="fa-solid fa-mug-hot"></i> Traktir Kopi Kreator</h4>
+                <p>Sistem ini murni hasil project iseng. Jika Anda merasa terbantu dengan fitur ini, boleh dong dukung lewat QRIS di samping! 🚀</p>
+            </div>
+            <div class="qris-image">
+                <img src="LINK_GAMBAR_QRIS_KAMU_DISINI.png" alt="QRIS Donasi">
+            </div>
+        </div>
+
     </div>
 
     <script>
-        // TAUTAN 1: LAPORAN HARIAN
         const sheetLaporanUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR6tWRHY6m4pfa4iEo8yXLy-7od6sdtR5iSA_ijoepgu6zWmdZYbVGrqgfYaqEImDLQVp1tvz_vedaJ/pub?gid=348491996&single=true&output=csv";
-        
-        // TAUTAN 2: MASTER MESIN
         const sheetMasterMesinUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR6tWRHY6m4pfa4iEo8yXLy-7od6sdtR5iSA_ijoepgu6zWmdZYbVGrqgfYaqEImDLQVp1tvz_vedaJ/pub?gid=1152805374&single=true&output=csv";
 
         let dataLaporanGlobal = []; 
@@ -331,21 +357,29 @@
                     const kendala = cleanText(item['Problem Mesin']);
                     const tindakan = cleanText(item['Perbaikan Mesin']);
                     const teknisi = cleanText(item['Nama']); 
+                    
+                    // AMBIL DATA SPAREPART DAN QTY
                     const sparepart = cleanText(item['Pergantian Spare Part']); 
+                    // Antisipasi header excel qty huruf besar/kecil
+                    const qty = cleanText(item['QTY'] || item['Qty'] || item['qty']); 
                     
-                    // MENGAMBIL STATUS (Mengakomodasi typo 'Statur' dari Excel)
+                    // GABUNGKAN SPAREPART DAN QTY JIKA ADA
+                    let detailSparepart = '-';
+                    if (sparepart !== '-') {
+                        detailSparepart = qty !== '-' ? `${sparepart} (QTY: ${qty})` : sparepart;
+                    }
+                    
+                    // WARNA STATUS
                     const statusVal = cleanText(item['Status'] || item['Statur']);
-                    
-                    // MENENTUKAN WARNA STATUS
-                    let statusBg = '#f1f5f9'; // Default abu-abu
+                    let statusBg = '#f1f5f9'; 
                     let statusColor = '#475569';
                     
                     if (statusVal.toUpperCase() === 'OK') {
-                        statusBg = '#d1fae5'; // Hijau muda
-                        statusColor = '#065f46'; // Hijau tua
+                        statusBg = '#d1fae5'; 
+                        statusColor = '#065f46'; 
                     } else if (statusVal !== '-') {
-                        statusBg = '#fef3c7'; // Kuning muda
-                        statusColor = '#92400e'; // Oranye gelap
+                        statusBg = '#fef3c7'; 
+                        statusColor = '#92400e'; 
                     }
 
                     riwayatContainer.innerHTML += `
@@ -365,7 +399,7 @@
                                 <p><strong>Tindakan:</strong> ${tindakan}</p>
                                 <div class="timeline-meta">
                                     <div class="meta-item"><i class="fa-solid fa-user-wrench"></i> ${teknisi}</div>
-                                    <div class="meta-item"><i class="fa-solid fa-gear"></i> ${sparepart}</div>
+                                    <div class="meta-item"><i class="fa-solid fa-gear"></i> ${detailSparepart}</div>
                                 </div>
                             </div>
                         </div>
