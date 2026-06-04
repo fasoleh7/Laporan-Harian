@@ -51,11 +51,12 @@
         .input-group button { background-color: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .input-group button:hover { background-color: var(--primary-hover); }
 
-        /* Info Grid */
-        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: var(--bg-color); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
-        .info-box { display: flex; flex-direction: column; }
-        .info-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
-        .info-value { font-size: 16px; font-weight: 700; color: var(--primary); }
+        /* Info Grid - Desain Dashboard Detail Mesin */
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-color); padding: 12px; border-radius: 12px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.04); }
+        .info-box { display: flex; flex-direction: column; background: #fff; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border-color); }
+        .info-box.full { grid-column: span 2; }
+        .info-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; margin-bottom: 3px; }
+        .info-value { font-size: 14px; font-weight: 700; color: var(--primary); word-break: break-word; }
 
         /* Filter Section */
         .filter-wrapper { display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 12px 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--border-color);}
@@ -96,7 +97,7 @@
         <div id="reader-card" class="card">
             <div id="reader" style="width: 100%;"></div>
             <div class="manual-input-container">
-                <p class="manual-input-label">Ketik ID Mesin atau No. Mesin:</p>
+                <p class="manual-input-label">Ketik ID Mesin atau Kode Mesin Lama/Baru:</p>
                 <div class="input-group">
                     <input type="text" id="manual-input" placeholder="Contoh: P-070 atau D03" autocomplete="off">
                     <button onclick="cariManual()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
@@ -105,14 +106,33 @@
         </div>
 
         <div id="result-card" class="card hidden">
+            
+            <h3 class="section-title" style="margin-bottom: 12px;"><i class="fa-solid fa-circle-info"></i> Spesifikasi Mesin</h3>
+            
             <div class="info-grid">
                 <div class="info-box">
+                    <span class="info-label">ID Lokasi</span>
+                    <span class="info-value" id="res-id-lokasi">-</span>
+                </div>
+                <div class="info-box">
+                    <span class="info-label">Kode (Baru/Lama)</span>
+                    <span class="info-value" id="res-no-mesin">-</span>
+                </div>
+                <div class="info-box full">
                     <span class="info-label">Nama Mesin</span>
                     <span class="info-value" id="res-nama">-</span>
                 </div>
                 <div class="info-box">
-                    <span class="info-label">Kode / ID Mesin</span>
-                    <span class="info-value" id="res-kode">-</span>
+                    <span class="info-label">Tonase</span>
+                    <span class="info-value" id="res-tonase">-</span>
+                </div>
+                <div class="info-box">
+                    <span class="info-label">Serial Number</span>
+                    <span class="info-value" id="res-sn">-</span>
+                </div>
+                <div class="info-box full">
+                    <span class="info-label">Spesifikasi Detail</span>
+                    <span class="info-value" id="res-spesifikasi">-</span>
                 </div>
             </div>
             
@@ -134,19 +154,36 @@
     </div>
 
     <script>
-        const sheetCSVUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR6tWRHY6m4pfa4iEo8yXLy-7od6sdtR5iSA_ijoepgu6zWmdZYbVGrqgfYaqEImDLQVp1tvz_vedaJ/pub?gid=348491996&single=true&output=csv";
+        // TAUTAN 1: LAPORAN HARIAN
+        const sheetLaporanUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR6tWRHY6m4pfa4iEo8yXLy-7od6sdtR5iSA_ijoepgu6zWmdZYbVGrqgfYaqEImDLQVp1tvz_vedaJ/pub?gid=348491996&single=true&output=csv";
+        
+        // TAUTAN 2: MASTER MESIN
+        const sheetMasterMesinUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR6tWRHY6m4pfa4iEo8yXLy-7od6sdtR5iSA_ijoepgu6zWmdZYbVGrqgfYaqEImDLQVp1tvz_vedaJ/pub?gid=1152805374&single=true&output=csv";
 
-        let html5QrcodeScanner = null;
-        let dataMesinGlobal = []; 
-        let riwayatMesinAktif = []; // Menyimpan riwayat mesin yang sedang dibuka
+        let dataLaporanGlobal = []; 
+        let dataMasterGlobal = []; 
+        let riwayatMesinAktif = []; 
 
         function fetchDataFromSheet() {
-            Papa.parse(sheetCSVUrl, {
+            // Ambil Data Laporan Harian
+            Papa.parse(sheetLaporanUrl, {
                 download: true,
                 header: true,
+                transformHeader: function(h) { return h.trim(); }, // ANTI SPASI TERSESAT
                 complete: function(results) {
-                    dataMesinGlobal = results.data;
-                    console.log("Data berhasil ditarik dari Spreadsheet!");
+                    dataLaporanGlobal = results.data;
+                    console.log("Data Laporan Harian berhasil ditarik!");
+                }
+            });
+
+            // Ambil Data Master Mesin (Spesifikasi)
+            Papa.parse(sheetMasterMesinUrl, {
+                download: true,
+                header: true,
+                transformHeader: function(h) { return h.trim(); }, // ANTI SPASI TERSESAT
+                complete: function(results) {
+                    dataMasterGlobal = results.data;
+                    console.log("Data Master Mesin berhasil ditarik!");
                 }
             });
         }
@@ -170,7 +207,7 @@
 
         function cariManual() {
             const inputVal = document.getElementById('manual-input').value.trim();
-            if (!inputVal) return alert("Silakan masukkan ID Mesin atau No. Mesin terlebih dahulu!");
+            if (!inputVal) return alert("Silakan masukkan ID Mesin atau No. Mesin!");
             hentikanScanner();
             prosesDataScan(inputVal);
         }
@@ -179,68 +216,99 @@
             if (e.key === 'Enter') cariManual();
         });
 
-        // FUNGSI UNTUK MENDAPATKAN BULAN-TAHUN DARI TANGGAL (Misal: "1-Nov-25" -> "Nov 25")
         function getBulanTahun(tglStr) {
             if (!tglStr) return "Lainnya";
-            const parts = tglStr.split(/[-/]/); // Bisa split tanda strip (-) atau miring (/)
-            if (parts.length >= 3) {
-                return `${parts[1]} 20${parts[2]}`; // Contoh output: "Nov 2025"
-            }
+            const parts = tglStr.split(/[-/]/); 
+            if (parts.length >= 3) return `${parts[1]} 20${parts[2]}`; 
             return "Lainnya";
         }
 
         function prosesDataScan(qrText) {
             const searchText = qrText.trim().toUpperCase();
+            const cleanText = (text) => (!text || text.trim() === '') ? '-' : text;
 
-            // PENCARIAN GANDA
-            const riwayatMentah = dataMesinGlobal.filter(row => {
+            // 1. Cari Spesifikasi di Data Master (NIK_Mesin)
+            let infoMaster = null;
+            if (dataMasterGlobal.length > 0) {
+                infoMaster = dataMasterGlobal.find(row => {
+                    const idLokasi = row['ID Lokasi'] ? row['ID Lokasi'].trim().toUpperCase() : '';
+                    const lama = row['Lama'] ? row['Lama'].trim().toUpperCase() : '';
+                    const baru = row['Baru'] ? row['Baru'].trim().toUpperCase() : '';
+                    return (idLokasi === searchText) || (lama === searchText) || (baru === searchText);
+                });
+            }
+
+            // 2. Cari Riwayat di Laporan Harian
+            const riwayatMentah = dataLaporanGlobal.filter(row => {
                 const idMesin = row['ID Mesin'] ? row['ID Mesin'].trim().toUpperCase() : '';
                 const noMesin = row['No. Mesin'] ? row['No. Mesin'].trim().toUpperCase() : '';
                 return (idMesin === searchText) || (noMesin === searchText);
             });
 
-            if (riwayatMentah.length > 0) {
-                const cleanText = (text) => (!text || text.trim() === '') ? '-' : text;
-
-                // FILTER ERROR
-                riwayatMesinAktif = riwayatMentah.filter(item => {
-                    const problem = item['Problem Mesin'] ? item['Problem Mesin'].toUpperCase() : '';
-                    const tanggal = item['Tanggal'] ? item['Tanggal'].toUpperCase() : '';
-                    if (problem.includes('#N/A') || problem.includes('#REF') || tanggal.includes('#N/A') || problem === '' || tanggal === '') {
-                        return false;
-                    }
-                    
-                    // Tambahkan properti grup bulan ke item untuk mempermudah filter
-                    item._grupBulan = getBulanTahun(item['Tanggal']);
-                    return true;
-                });
-
-                document.getElementById('res-nama').innerText = cleanText(riwayatMentah[0]['Nama Mesin']);
-                const kodeTampil = riwayatMentah[0]['ID Mesin'] || riwayatMentah[0]['No. Mesin'] || searchText;
-                document.getElementById('res-kode').innerText = cleanText(kodeTampil).toUpperCase();
-
-                setupFilterBulan(riwayatMesinAktif);
-                renderTimeline(riwayatMesinAktif);
-
-                document.getElementById('result-card').classList.remove('hidden');
-            } else {
-                alert(`Data tidak ditemukan! Kode ${searchText} belum terdaftar.`);
+            if (!infoMaster && riwayatMentah.length === 0) {
+                alert(`Data tidak ditemukan! Kode ${searchText} belum terdaftar di Sistem.`);
                 resetScanner();
+                return;
             }
+
+            // ============================================
+            // TAMPILKAN HEADER SPESIFIKASI MESIN
+            // ============================================
+            if (infoMaster) {
+                document.getElementById('res-id-lokasi').innerText = cleanText(infoMaster['ID Lokasi']);
+                
+                let kodeBaru = cleanText(infoMaster['Baru']);
+                let kodeLama = cleanText(infoMaster['Lama']);
+                if (kodeBaru !== '-' && kodeLama !== '-') {
+                    document.getElementById('res-no-mesin').innerText = `${kodeBaru} (Lama: ${kodeLama})`;
+                } else {
+                    document.getElementById('res-no-mesin').innerText = kodeBaru !== '-' ? kodeBaru : kodeLama;
+                }
+                
+                document.getElementById('res-nama').innerText = cleanText(infoMaster['Nama Mesin']);
+                document.getElementById('res-tonase').innerText = cleanText(infoMaster['Tonase']);
+                // Mengakomodasi kemungkinan nama header "Serial Number" atau "SN"
+                const serialNum = infoMaster['Serial Number'] || infoMaster['SN'] || '-';
+                document.getElementById('res-sn').innerText = cleanText(serialNum);
+                document.getElementById('res-spesifikasi').innerText = cleanText(infoMaster['Spesifikasi']);
+            } else {
+                document.getElementById('res-id-lokasi').innerText = cleanText(riwayatMentah[0]['ID Mesin']);
+                document.getElementById('res-no-mesin').innerText = cleanText(riwayatMentah[0]['No. Mesin']);
+                document.getElementById('res-nama').innerText = cleanText(riwayatMentah[0]['Nama Mesin']);
+                document.getElementById('res-tonase').innerText = '-';
+                document.getElementById('res-spesifikasi').innerText = '-';
+                document.getElementById('res-sn').innerText = '-';
+            }
+
+            // ============================================
+            // TAMPILKAN TIMELINE RIWAYAT
+            // ============================================
+            riwayatMesinAktif = riwayatMentah.filter(item => {
+                const problem = item['Problem Mesin'] ? item['Problem Mesin'].toUpperCase() : '';
+                const tanggal = item['Tanggal'] ? item['Tanggal'].toUpperCase() : '';
+                if (problem.includes('#N/A') || problem.includes('#REF') || tanggal.includes('#N/A') || problem === '' || tanggal === '') {
+                    return false;
+                }
+                item._grupBulan = getBulanTahun(item['Tanggal']);
+                return true;
+            });
+
+            setupFilterBulan(riwayatMesinAktif);
+            renderTimeline(riwayatMesinAktif);
+
+            document.getElementById('result-card').classList.remove('hidden');
         }
 
-        // PERSIAPAN DROPDOWN FILTER BULAN
         function setupFilterBulan(data) {
             const filterContainer = document.getElementById('filter-container');
             const selectFilter = document.getElementById('month-filter');
-            selectFilter.innerHTML = '<option value="all">Semua Riwayat</option>'; // Reset opsi
+            selectFilter.innerHTML = '<option value="all">Semua Riwayat</option>'; 
 
             if (data.length === 0) {
                 filterContainer.classList.add('hidden');
                 return;
             }
 
-            // Ambil bulan unik (unik agar tidak ada opsi ganda di dropdown)
             let bulanUnik = new Set();
             data.forEach(item => bulanUnik.add(item._grupBulan));
 
@@ -248,7 +316,7 @@
                 bulanUnik.forEach(bulan => {
                     let opt = document.createElement('option');
                     opt.value = bulan;
-                    opt.textContent = bulan; // Tulisannya: "Nov 2025"
+                    opt.textContent = bulan;
                     selectFilter.appendChild(opt);
                 });
                 filterContainer.classList.remove('hidden');
@@ -257,20 +325,16 @@
             }
         }
 
-        // SAAT OPSI BULAN DIPILIH / DIGANTI
         function terapkanFilterBulan() {
             const filterValue = document.getElementById('month-filter').value;
-            
             if (filterValue === 'all') {
-                renderTimeline(riwayatMesinAktif); // Tampilkan semua
+                renderTimeline(riwayatMesinAktif);
             } else {
-                // Saring data berdasarkan grup bulan yang dipilih
                 const dataTersaring = riwayatMesinAktif.filter(item => item._grupBulan === filterValue);
                 renderTimeline(dataTersaring);
             }
         }
 
-        // FUNGSI MENCETAK HTML KE LAYAR
         function renderTimeline(dataUntukDitampilkan) {
             const riwayatContainer = document.getElementById('res-riwayat');
             riwayatContainer.innerHTML = ''; 
@@ -305,7 +369,7 @@
                     `;
                 });
             } else {
-                riwayatContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-folder-open" style="font-size: 24px; color: #cbd5e1; margin-bottom: 8px; display: block;"></i>Tidak ada riwayat perbaikan pada bulan tersebut.</div>';
+                riwayatContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-folder-open" style="font-size: 24px; color: #cbd5e1; margin-bottom: 8px; display: block;"></i>Belum ada riwayat perbaikan yang tercatat untuk mesin ini.</div>';
             }
         }
 
