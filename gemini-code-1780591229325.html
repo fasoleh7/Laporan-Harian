@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Laporan Mesin Brebes</title>
+    
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+
+    <style>
+        * { box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { background-color: #f4f7f6; margin: 0; padding: 20px; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        header { text-align: center; margin-bottom: 20px; }
+        .hidden { display: none !important; }
+        .card { margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; background-color: #fafafa; }
+        .table-info { width: 100%; border-collapse: collapse; }
+        .table-info td { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .riwayat-item { background: #fff; border-left: 4px solid #007bff; padding: 10px; margin-bottom: 10px; border-radius: 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .btn-reset { display: block; width: 100%; padding: 12px; background-color: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; margin-top: 15px; cursor: pointer; }
+        .btn-reset:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h2>Scan Mesin 🔍</h2>
+            <p>Arahkan kamera ke QR Code (Isi QR cukup No Mesin, misal: A02)</p>
+        </header>
+
+        <div id="reader" style="width: 100%; max-width: 400px; margin: 0 auto;"></div>
+
+        <div id="result-card" class="card hidden">
+            <h3>Detail Mesin</h3>
+            <table class="table-info">
+                <tr><td><strong>Nama Mesin</strong></td><td id="res-nama">-</td></tr>
+                <tr><td><strong>No. Mesin</strong></td><td id="res-kode">-</td></tr>
+            </table>
+            <hr>
+            <h3>Riwayat Perbaikan Harian</h3>
+            <div id="res-riwayat" class="riwayat-list"></div>
+            <button onclick="resetScanner()" class="btn-reset">Scan Mesin Lain</button>
+        </div>
+    </div>
+
+    <script>
+        // =========================================================
+        // WAJIB GANTI LINK DI BAWAH DENGAN LINK CSV GOOGLE SHEETS ANDA
+        // =========================================================
+        const sheetCSVUrl = "PASTE_LINK_CSV_GOOGLE_SHEETS_DI_SINI";
+
+        let html5QrcodeScanner = null;
+        let dataMesinGlobal = []; 
+
+        function fetchDataFromSheet() {
+            Papa.parse(sheetCSVUrl, {
+                download: true,
+                header: true,
+                complete: function(results) {
+                    dataMesinGlobal = results.data;
+                    console.log("Data Sheet berhasil ditarik!");
+                }
+            });
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            html5QrcodeScanner.clear().then(() => {
+                document.getElementById('reader').classList.add('hidden');
+                prosesDataScan(decodedText); 
+            });
+        }
+
+        function onScanFailure(error) {
+            // Abaikan error saat kamera mencari fokus QR
+        }
+
+        function mulaiScanner() {
+            document.getElementById('reader').classList.remove('hidden');
+            document.getElementById('result-card').classList.add('hidden');
+            
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                "reader",
+                { fps: 10, qrbox: {width: 250, height: 250} },
+                false);
+            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+        }
+
+        function prosesDataScan(qrText) {
+            // Filter data berdasarkan NO. MESIN
+            const riwayatMesinIni = dataMesinGlobal.filter(row => {
+                return row['NO. MESIN'] && row['NO. MESIN'].toUpperCase() === qrText.toUpperCase();
+            });
+
+            if (riwayatMesinIni.length > 0) {
+                document.getElementById('res-nama').innerText = riwayatMesinIni[0]['NAMA MESIN'];
+                document.getElementById('res-kode').innerText = riwayatMesinIni[0]['NO. MESIN'];
+
+                const riwayatContainer = document.getElementById('res-riwayat');
+                riwayatContainer.innerHTML = ''; 
+                
+                riwayatMesinIni.forEach(item => {
+                    if (item['TANGGAL']) { 
+                        riwayatContainer.innerHTML += `
+                            <div class="riwayat-item">
+                                <small>📅 ${item['HARI']}, ${item['TANGGAL']} | ⏱️ ${item['MULAI']} - ${item['SELESAI']}</small>
+                                <p style="margin: 8px 0 4px 0;"><strong>Kendala:</strong> ${item['URAIAN PEKERJAAN']}</p>
+                                <p style="margin: 0 0 8px 0;"><strong>Tindakan:</strong> ${item['TINDAKAN PERBAIKAN']}</p>
+                                <small style="color: #666;">
+                                    👨‍🔧 Teknisi: ${item['TEKNISI']} | ⚙️ Sparepart: ${item['NAMA SPAREPART'] || '-'}
+                                </small>
+                            </div>
+                        `;
+                    }
+                });
+
+                document.getElementById('result-card').classList.remove('hidden');
+            } else {
+                alert(`Riwayat untuk mesin ${qrText} belum ada di database!`);
+                resetScanner();
+            }
+        }
+
+        function resetScanner() {
+            mulaiScanner();
+        }
+
+        window.onload = () => {
+            fetchDataFromSheet();
+            mulaiScanner();
+        };
+    </script>
+</body>
+</html>
