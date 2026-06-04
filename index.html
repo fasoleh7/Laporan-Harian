@@ -183,40 +183,65 @@
             }
         });
 
-        // 6. Proses dan Tampilkan Data
+        // 6. Proses dan Tampilkan Data (Sudah Diperbarui untuk filter #N/A)
         function prosesDataScan(qrText) {
             const riwayatMesinIni = dataMesinGlobal.filter(row => {
                 return row['NO. MESIN'] && row['NO. MESIN'].toUpperCase() === qrText.trim().toUpperCase();
             });
 
             if (riwayatMesinIni.length > 0) {
-                document.getElementById('res-nama').innerText = riwayatMesinIni[0]['NAMA MESIN'];
-                document.getElementById('res-kode').innerText = riwayatMesinIni[0]['NO. MESIN'].toUpperCase();
+                // Helper function untuk membersihkan teks "#N/A" atau kosong
+                const cleanText = (text) => {
+                    if (!text || text.trim() === '' || text.trim() === '#N/A') return '-';
+                    return text;
+                };
+
+                document.getElementById('res-nama').innerText = cleanText(riwayatMesinIni[0]['NAMA MESIN']);
+                document.getElementById('res-kode').innerText = cleanText(riwayatMesinIni[0]['NO. MESIN']).toUpperCase();
 
                 const riwayatContainer = document.getElementById('res-riwayat');
                 riwayatContainer.innerHTML = ''; 
                 
+                let adaRiwayatValid = false;
+
                 riwayatMesinIni.forEach(item => {
-                    if (item['TANGGAL']) { 
+                    // Hanya tampilkan jika TANGGAL ada isinya dan bukan #N/A
+                    if (item['TANGGAL'] && item['TANGGAL'].trim() !== '' && item['TANGGAL'] !== '#N/A') { 
+                        adaRiwayatValid = true;
+
+                        const hari = cleanText(item['HARI']);
+                        const tanggal = cleanText(item['TANGGAL']);
+                        const mulai = cleanText(item['MULAI']);
+                        const selesai = cleanText(item['SELESAI']);
+                        const kendala = cleanText(item['URAIAN PEKERJAAN']);
+                        const tindakan = cleanText(item['TINDAKAN PERBAIKAN']);
+                        const teknisi = cleanText(item['TEKNISI']);
+                        const sparepart = cleanText(item['NAMA SPAREPART']);
+
                         riwayatContainer.innerHTML += `
                             <div class="timeline-item">
                                 <div class="timeline-dot"></div>
                                 <div class="timeline-date">
-                                    <span><i class="fa-regular fa-calendar-days"></i> ${item['HARI']}, ${item['TANGGAL']}</span>
-                                    <span><i class="fa-regular fa-clock"></i> ${item['MULAI']} - ${item['SELESAI']}</span>
+                                    <span><i class="fa-regular fa-calendar-days"></i> ${hari}, ${tanggal}</span>
+                                    <span><i class="fa-regular fa-clock"></i> ${mulai} - ${selesai}</span>
                                 </div>
                                 <div class="timeline-content">
-                                    <p><strong>Kendala:</strong> ${item['URAIAN PEKERJAAN']}</p>
-                                    <p><strong>Tindakan:</strong> ${item['TINDAKAN PERBAIKAN']}</p>
+                                    <p><strong>Kendala:</strong> ${kendala}</p>
+                                    <p><strong>Tindakan:</strong> ${tindakan}</p>
                                     <div class="timeline-meta">
-                                        <div class="meta-item"><i class="fa-solid fa-user-wrench"></i> ${item['TEKNISI']}</div>
-                                        <div class="meta-item"><i class="fa-solid fa-gear"></i> ${item['NAMA SPAREPART'] || '-'}</div>
+                                        <div class="meta-item"><i class="fa-solid fa-user-wrench"></i> ${teknisi}</div>
+                                        <div class="meta-item"><i class="fa-solid fa-gear"></i> ${sparepart}</div>
                                     </div>
                                 </div>
                             </div>
                         `;
                     }
                 });
+
+                // Jika semua baris isinya #N/A, tampilkan pesan ini
+                if (!adaRiwayatValid) {
+                    riwayatContainer.innerHTML = '<p style="text-align:center; color:#64748b; font-size: 13px; margin-top: 15px;">Belum ada riwayat perbaikan untuk mesin ini.</p>';
+                }
 
                 document.getElementById('result-card').classList.remove('hidden');
             } else {
