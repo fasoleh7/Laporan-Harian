@@ -57,6 +57,12 @@
         .info-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
         .info-value { font-size: 16px; font-weight: 700; color: var(--primary); }
 
+        /* Filter Section */
+        .filter-wrapper { display: flex; align-items: center; justify-content: space-between; background: var(--bg-color); padding: 12px 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid var(--border-color);}
+        .filter-wrapper label { font-size: 13px; font-weight: 600; color: var(--text-main); display: flex; align-items: center; gap: 6px;}
+        .filter-wrapper select { flex: 1; margin-left: 15px; padding: 8px 12px; border: 1px solid var(--border-color); border-radius: 6px; font-family: 'Poppins', sans-serif; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; background: white;}
+        .filter-wrapper select:focus { border-color: var(--primary); }
+
         h3.section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
 
         /* Timeline Riwayat */
@@ -66,7 +72,7 @@
         .timeline-item:last-child { margin-bottom: 0; }
         .timeline-dot { position: absolute; left: -25px; top: 4px; width: 12px; height: 12px; background: var(--primary); border-radius: 50%; border: 3px solid var(--card-bg); box-shadow: 0 0 0 1px var(--primary); }
         .timeline-date { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; display: flex; gap: 12px; }
-        .timeline-content { background: var(--bg-color); padding: 12px 16px; border-radius: 0 12px 12px 12px; font-size: 13px; }
+        .timeline-content { background: var(--bg-color); padding: 12px 16px; border-radius: 0 12px 12px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.03); }
         .timeline-content p { margin-bottom: 6px; line-height: 1.5; }
         .timeline-meta { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; font-weight: 500; color: var(--text-muted); }
         .meta-item i { color: var(--primary); margin-right: 4px; }
@@ -111,6 +117,14 @@
             </div>
             
             <h3 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Perbaikan</h3>
+            
+            <div id="filter-container" class="filter-wrapper hidden">
+                <label for="month-filter"><i class="fa-solid fa-filter"></i> Bulan:</label>
+                <select id="month-filter" onchange="terapkanFilterBulan()">
+                    <option value="all">Semua Riwayat</option>
+                </select>
+            </div>
+
             <div class="timeline" id="res-riwayat"></div>
 
             <button onclick="resetScanner()" class="btn-reset">
@@ -120,11 +134,11 @@
     </div>
 
     <script>
-        // LINK CSV GOOGLE SHEETS
         const sheetCSVUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vR6tWRHY6m4pfa4iEo8yXLy-7od6sdtR5iSA_ijoepgu6zWmdZYbVGrqgfYaqEImDLQVp1tvz_vedaJ/pub?gid=348491996&single=true&output=csv";
 
         let html5QrcodeScanner = null;
         let dataMesinGlobal = []; 
+        let riwayatMesinAktif = []; // Menyimpan riwayat mesin yang sedang dibuka
 
         function fetchDataFromSheet() {
             Papa.parse(sheetCSVUrl, {
@@ -133,19 +147,12 @@
                 complete: function(results) {
                     dataMesinGlobal = results.data;
                     console.log("Data berhasil ditarik dari Spreadsheet!");
-                },
-                error: function(err) {
-                    console.error("Gagal menarik data:", err);
                 }
             });
         }
 
-        function onScanSuccess(decodedText) {
-            hentikanScanner();
-            prosesDataScan(decodedText); 
-        }
-
-        function onScanFailure(error) { /* Abaikan error pencarian fokus kamera */ }
+        function onScanSuccess(decodedText) { hentikanScanner(); prosesDataScan(decodedText); }
+        function onScanFailure() {}
 
         function mulaiScanner() {
             document.getElementById('reader-card').classList.remove('hidden');
@@ -158,17 +165,12 @@
 
         function hentikanScanner() {
             document.getElementById('reader-card').classList.add('hidden');
-            try {
-                if(html5QrcodeScanner) html5QrcodeScanner.clear();
-            } catch (e) { console.log(e); }
+            try { if(html5QrcodeScanner) html5QrcodeScanner.clear(); } catch (e) { }
         }
 
         function cariManual() {
             const inputVal = document.getElementById('manual-input').value.trim();
-            if (!inputVal) {
-                alert("Silakan masukkan ID Mesin atau No. Mesin terlebih dahulu!");
-                return;
-            }
+            if (!inputVal) return alert("Silakan masukkan ID Mesin atau No. Mesin terlebih dahulu!");
             hentikanScanner();
             prosesDataScan(inputVal);
         }
@@ -177,76 +179,138 @@
             if (e.key === 'Enter') cariManual();
         });
 
-        // PROSES DATA SESUAI FILE CSV ASLI
+        // FUNGSI UNTUK MENDAPATKAN BULAN-TAHUN DARI TANGGAL (Misal: "1-Nov-25" -> "Nov 25")
+        function getBulanTahun(tglStr) {
+            if (!tglStr) return "Lainnya";
+            const parts = tglStr.split(/[-/]/); // Bisa split tanda strip (-) atau miring (/)
+            if (parts.length >= 3) {
+                return `${parts[1]} 20${parts[2]}`; // Contoh output: "Nov 2025"
+            }
+            return "Lainnya";
+        }
+
         function prosesDataScan(qrText) {
             const searchText = qrText.trim().toUpperCase();
 
-            // PENCARIAN GANDA: Cek di kolom 'ID Mesin' atau 'No. Mesin'
-            const riwayatMesinIni = dataMesinGlobal.filter(row => {
+            // PENCARIAN GANDA
+            const riwayatMentah = dataMesinGlobal.filter(row => {
                 const idMesin = row['ID Mesin'] ? row['ID Mesin'].trim().toUpperCase() : '';
                 const noMesin = row['No. Mesin'] ? row['No. Mesin'].trim().toUpperCase() : '';
                 return (idMesin === searchText) || (noMesin === searchText);
             });
 
-            if (riwayatMesinIni.length > 0) {
+            if (riwayatMentah.length > 0) {
                 const cleanText = (text) => (!text || text.trim() === '') ? '-' : text;
 
-                // FILTER: Buang baris jika 'Problem Mesin' atau 'Tanggal' kosong/error
-                const validRiwayat = riwayatMesinIni.filter(item => {
+                // FILTER ERROR
+                riwayatMesinAktif = riwayatMentah.filter(item => {
                     const problem = item['Problem Mesin'] ? item['Problem Mesin'].toUpperCase() : '';
                     const tanggal = item['Tanggal'] ? item['Tanggal'].toUpperCase() : '';
-                    
                     if (problem.includes('#N/A') || problem.includes('#REF') || tanggal.includes('#N/A') || problem === '' || tanggal === '') {
                         return false;
                     }
+                    
+                    // Tambahkan properti grup bulan ke item untuk mempermudah filter
+                    item._grupBulan = getBulanTahun(item['Tanggal']);
                     return true;
                 });
 
-                document.getElementById('res-nama').innerText = cleanText(riwayatMesinIni[0]['Nama Mesin']);
-                const kodeTampil = riwayatMesinIni[0]['ID Mesin'] || riwayatMesinIni[0]['No. Mesin'] || searchText;
+                document.getElementById('res-nama').innerText = cleanText(riwayatMentah[0]['Nama Mesin']);
+                const kodeTampil = riwayatMentah[0]['ID Mesin'] || riwayatMentah[0]['No. Mesin'] || searchText;
                 document.getElementById('res-kode').innerText = cleanText(kodeTampil).toUpperCase();
 
-                const riwayatContainer = document.getElementById('res-riwayat');
-                riwayatContainer.innerHTML = ''; 
-                
-                if (validRiwayat.length > 0) {
-                    validRiwayat.forEach(item => {
-                        // NAMA KOLOM DISESUAIKAN DENGAN FILE CSV ASLI
-                        const tanggal = cleanText(item['Tanggal']);
-                        const mulai = cleanText(item['Mulai']);
-                        const selesai = cleanText(item['Selesai']);
-                        const kendala = cleanText(item['Problem Mesin']);
-                        const tindakan = cleanText(item['Perbaikan Mesin']);
-                        const teknisi = cleanText(item['Nama']); 
-                        const sparepart = cleanText(item['Pergantian Spare Part']); 
-
-                        riwayatContainer.innerHTML += `
-                            <div class="timeline-item">
-                                <div class="timeline-dot"></div>
-                                <div class="timeline-date">
-                                    <span><i class="fa-regular fa-calendar-days"></i> ${tanggal}</span>
-                                    <span><i class="fa-regular fa-clock"></i> ${mulai} - ${selesai}</span>
-                                </div>
-                                <div class="timeline-content">
-                                    <p><strong>Kendala:</strong> ${kendala}</p>
-                                    <p><strong>Tindakan:</strong> ${tindakan}</p>
-                                    <div class="timeline-meta">
-                                        <div class="meta-item"><i class="fa-solid fa-user-wrench"></i> ${teknisi}</div>
-                                        <div class="meta-item"><i class="fa-solid fa-gear"></i> ${sparepart}</div>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                } else {
-                    riwayatContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-check-circle" style="font-size: 24px; color: var(--success); margin-bottom: 8px; display: block;"></i>Belum ada riwayat perbaikan yang tercatat untuk mesin ini.</div>';
-                }
+                setupFilterBulan(riwayatMesinAktif);
+                renderTimeline(riwayatMesinAktif);
 
                 document.getElementById('result-card').classList.remove('hidden');
             } else {
-                alert(`Data tidak ditemukan! Kode ${searchText} belum terdaftar di database Laporan Harian.`);
+                alert(`Data tidak ditemukan! Kode ${searchText} belum terdaftar.`);
                 resetScanner();
             }
+        }
+
+        // PERSIAPAN DROPDOWN FILTER BULAN
+        function setupFilterBulan(data) {
+            const filterContainer = document.getElementById('filter-container');
+            const selectFilter = document.getElementById('month-filter');
+            selectFilter.innerHTML = '<option value="all">Semua Riwayat</option>'; // Reset opsi
+
+            if (data.length === 0) {
+                filterContainer.classList.add('hidden');
+                return;
+            }
+
+            // Ambil bulan unik (unik agar tidak ada opsi ganda di dropdown)
+            let bulanUnik = new Set();
+            data.forEach(item => bulanUnik.add(item._grupBulan));
+
+            if (bulanUnik.size > 0) {
+                bulanUnik.forEach(bulan => {
+                    let opt = document.createElement('option');
+                    opt.value = bulan;
+                    opt.textContent = bulan; // Tulisannya: "Nov 2025"
+                    selectFilter.appendChild(opt);
+                });
+                filterContainer.classList.remove('hidden');
+            } else {
+                filterContainer.classList.add('hidden');
+            }
+        }
+
+        // SAAT OPSI BULAN DIPILIH / DIGANTI
+        function terapkanFilterBulan() {
+            const filterValue = document.getElementById('month-filter').value;
+            
+            if (filterValue === 'all') {
+                renderTimeline(riwayatMesinAktif); // Tampilkan semua
+            } else {
+                // Saring data berdasarkan grup bulan yang dipilih
+                const dataTersaring = riwayatMesinAktif.filter(item => item._grupBulan === filterValue);
+                renderTimeline(dataTersaring);
+            }
+        }
+
+        // FUNGSI MENCETAK HTML KE LAYAR
+        function renderTimeline(dataUntukDitampilkan) {
+            const riwayatContainer = document.getElementById('res-riwayat');
+            riwayatContainer.innerHTML = ''; 
+            const cleanText = (text) => (!text || text.trim() === '') ? '-' : text;
+
+            if (dataUntukDitampilkan.length > 0) {
+                dataUntukDitampilkan.forEach(item => {
+                    const tanggal = cleanText(item['Tanggal']);
+                    const mulai = cleanText(item['Mulai']);
+                    const selesai = cleanText(item['Selesai']);
+                    const kendala = cleanText(item['Problem Mesin']);
+                    const tindakan = cleanText(item['Perbaikan Mesin']);
+                    const teknisi = cleanText(item['Nama']); 
+                    const sparepart = cleanText(item['Pergantian Spare Part']); 
+
+                    riwayatContainer.innerHTML += `
+                        <div class="timeline-item">
+                            <div class="timeline-dot"></div>
+                            <div class="timeline-date">
+                                <span><i class="fa-regular fa-calendar-days"></i> ${tanggal}</span>
+                                <span><i class="fa-regular fa-clock"></i> ${mulai} - ${selesai}</span>
+                            </div>
+                            <div class="timeline-content">
+                                <p><strong>Kendala:</strong> ${kendala}</p>
+                                <p><strong>Tindakan:</strong> ${tindakan}</p>
+                                <div class="timeline-meta">
+                                    <div class="meta-item"><i class="fa-solid fa-user-wrench"></i> ${teknisi}</div>
+                                    <div class="meta-item"><i class="fa-solid fa-gear"></i> ${sparepart}</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            } else {
+                riwayatContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-folder-open" style="font-size: 24px; color: #cbd5e1; margin-bottom: 8px; display: block;"></i>Tidak ada riwayat perbaikan pada bulan tersebut.</div>';
+            }
+        }
+
+        function resetScanner() {
+            mulaiScanner();
         }
 
         window.onload = () => {
