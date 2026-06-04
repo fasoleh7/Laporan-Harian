@@ -71,6 +71,9 @@
         .timeline-meta { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; font-weight: 500; color: var(--text-muted); }
         .meta-item i { color: var(--primary); margin-right: 4px; }
 
+        /* Pesan Kosong */
+        .empty-state { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 15px; padding: 20px; background: var(--bg-color); border-radius: 8px;}
+
         /* Buttons */
         .btn-reset { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; margin-top: 25px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
         .btn-reset:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
@@ -150,7 +153,7 @@
         function mulaiScanner() {
             document.getElementById('reader-card').classList.remove('hidden');
             document.getElementById('result-card').classList.add('hidden');
-            document.getElementById('manual-input').value = ''; // Kosongkan input manual
+            document.getElementById('manual-input').value = ''; 
             
             html5QrcodeScanner = new Html5QrcodeScanner(
                 "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
@@ -176,25 +179,37 @@
             prosesDataScan(inputVal);
         }
 
-        // Jalankan cariManual jika user menekan tombol Enter di keyboard
+        // Enter keypress
         document.getElementById('manual-input').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') {
                 cariManual();
             }
         });
 
-        // 6. Proses dan Tampilkan Data (Sudah Diperbarui untuk filter #N/A)
+        // 6. Proses Data dengan Filter "Sapu Bersih"
         function prosesDataScan(qrText) {
             const riwayatMesinIni = dataMesinGlobal.filter(row => {
                 return row['NO. MESIN'] && row['NO. MESIN'].toUpperCase() === qrText.trim().toUpperCase();
             });
 
             if (riwayatMesinIni.length > 0) {
-                // Helper function untuk membersihkan teks "#N/A" atau kosong
+                
+                // Fungsi membersihkan teks dasar
                 const cleanText = (text) => {
-                    if (!text || text.trim() === '' || text.trim() === '#N/A') return '-';
+                    if (!text || text.trim() === '') return '-';
                     return text;
                 };
+
+                // FILTERING: Buang semua baris yang Uraian atau Tanggal-nya mengandung #N/A atau kosong
+                const validRiwayat = riwayatMesinIni.filter(item => {
+                    const uraian = item['URAIAN PEKERJAAN'] ? item['URAIAN PEKERJAAN'].toUpperCase() : '';
+                    const tanggal = item['TANGGAL'] ? item['TANGGAL'].toUpperCase() : '';
+                    
+                    if (uraian.includes('#N/A') || tanggal.includes('#N/A') || uraian === '' || tanggal === '') {
+                        return false;
+                    }
+                    return true;
+                });
 
                 document.getElementById('res-nama').innerText = cleanText(riwayatMesinIni[0]['NAMA MESIN']);
                 document.getElementById('res-kode').innerText = cleanText(riwayatMesinIni[0]['NO. MESIN']).toUpperCase();
@@ -202,13 +217,8 @@
                 const riwayatContainer = document.getElementById('res-riwayat');
                 riwayatContainer.innerHTML = ''; 
                 
-                let adaRiwayatValid = false;
-
-                riwayatMesinIni.forEach(item => {
-                    // Hanya tampilkan jika TANGGAL ada isinya dan bukan #N/A
-                    if (item['TANGGAL'] && item['TANGGAL'].trim() !== '' && item['TANGGAL'] !== '#N/A') { 
-                        adaRiwayatValid = true;
-
+                if (validRiwayat.length > 0) {
+                    validRiwayat.forEach(item => {
                         const hari = cleanText(item['HARI']);
                         const tanggal = cleanText(item['TANGGAL']);
                         const mulai = cleanText(item['MULAI']);
@@ -235,17 +245,15 @@
                                 </div>
                             </div>
                         `;
-                    }
-                });
-
-                // Jika semua baris isinya #N/A, tampilkan pesan ini
-                if (!adaRiwayatValid) {
-                    riwayatContainer.innerHTML = '<p style="text-align:center; color:#64748b; font-size: 13px; margin-top: 15px;">Belum ada riwayat perbaikan untuk mesin ini.</p>';
+                    });
+                } else {
+                    // Tampilan jika data mesin ada, tapi belum pernah rusak / laporannya #N/A semua
+                    riwayatContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-check-circle" style="font-size: 24px; color: var(--success); margin-bottom: 8px; display: block;"></i>Belum ada riwayat perbaikan yang tercatat untuk mesin ini.</div>';
                 }
 
                 document.getElementById('result-card').classList.remove('hidden');
             } else {
-                alert(`Riwayat untuk mesin ${qrText.toUpperCase()} belum ada di database! Pastikan nomor mesin sesuai dengan di Excel.`);
+                alert(`Data tidak ditemukan! Mesin ${qrText.toUpperCase()} belum terdaftar di Laporan Harian.`);
                 resetScanner();
             }
         }
