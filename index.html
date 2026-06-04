@@ -76,8 +76,6 @@
         .timeline-date-info { display: flex; gap: 12px; align-items: center; }
         .timeline-content { background: var(--bg-color); padding: 12px 16px; border-radius: 0 12px 12px 12px; font-size: 13px; border: 1px solid rgba(0,0,0,0.03); }
         .timeline-content p { margin-bottom: 6px; line-height: 1.5; }
-        
-        /* Modifikasi Timeline Meta agar bisa turun ke baris baru kalau namanya panjang */
         .timeline-meta { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; font-weight: 500; color: var(--text-muted); }
         .meta-item i { color: var(--primary); margin-right: 4px; }
 
@@ -92,7 +90,7 @@
         .btn-reset:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
 
         /* =========================================
-           STYLE IKLAN QRIS 
+           STYLE IKLAN QRIS & MODAL ZOOM
            ========================================= */
         .qris-card { background: linear-gradient(135deg, #eff6ff, #dbeafe); border: 1px solid #bfdbfe; border-radius: 12px; padding: 15px; margin-top: 30px; position: relative; display: flex; align-items: center; gap: 12px; box-shadow: 0 4px 12px rgba(37,99,235,0.05); transition: opacity 0.3s ease; }
         .close-qris { position: absolute; top: 6px; right: 8px; background: transparent; border: none; color: #64748b; cursor: pointer; font-size: 14px; padding: 4px; }
@@ -102,7 +100,19 @@
         .qris-text h4 i { color: #d97706; }
         .qris-text p { font-size: 11px; color: #334155; line-height: 1.4; }
         .qris-image { flex-shrink: 0; }
-        .qris-image img { width: 70px; height: 70px; border-radius: 8px; object-fit: contain; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #fff; }
+        .qris-image img { width: 70px; height: 70px; border-radius: 8px; object-fit: contain; border: 2px solid #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.1); background: #fff; cursor: zoom-in; transition: transform 0.2s; }
+        .qris-image img:hover { transform: scale(1.05); }
+
+        /* CSS Modal Popup untuk QRIS */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.8); z-index: 1000; display: flex; justify-content: center; align-items: center; padding: 20px; opacity: 1; transition: opacity 0.3s; }
+        .modal-overlay.hidden { display: none !important; opacity: 0; }
+        .modal-content { background: white; padding: 20px; border-radius: 16px; text-align: center; position: relative; max-width: 90%; width: 320px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.3s ease-out; }
+        @keyframes popIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .close-modal { position: absolute; top: 12px; right: 15px; font-size: 20px; color: #94a3b8; cursor: pointer; transition: color 0.2s; }
+        .close-modal:hover { color: #ef4444; }
+        .modal-content img { width: 100%; height: auto; border-radius: 12px; margin-bottom: 15px; border: 1px solid #f1f5f9; }
+        .btn-download-qris { display: flex; justify-content: center; align-items: center; gap: 8px; background-color: #2563eb; color: white; padding: 12px; border-radius: 8px; text-decoration: none; font-size: 14px; font-weight: 600; width: 100%; transition: background 0.2s; }
+        .btn-download-qris:hover { background-color: #1d4ed8; color: white; }
     </style>
 </head>
 <body>
@@ -177,13 +187,25 @@
             </button>
             <div class="qris-text">
                 <h4><i class="fa-solid fa-mug-hot"></i> Traktir Kopi Kreator</h4>
-                <p>Sistem ini murni hasil project iseng. Jika Anda merasa terbantu dengan fitur ini, boleh dong dukung lewat QRIS di samping! 🚀</p>
+                <p>Sistem ini murni hasil project iseng. Jika terbantu, boleh dong dukung lewat QRIS di samping! 🚀</p>
             </div>
             <div class="qris-image">
-                <img src="https://github.com/fasoleh7/Laporan-Harian/blob/main/WhatsApp%20Image%202026-06-05%20at%2001.32.45.jpeg?raw=true" alt="QRIS Donasi">
+                <img src="https://raw.githubusercontent.com/fasoleh7/Laporan-Harian/main/WhatsApp%20Image%202026-06-05%20at%2001.32.45.jpeg" alt="Klik untuk perbesar" title="Klik untuk perbesar QRIS" onclick="bukaModalQris()">
             </div>
         </div>
 
+    </div>
+
+    <div id="modal-qris" class="modal-overlay hidden">
+        <div class="modal-content">
+            <span class="close-modal" onclick="tutupModalQris()"><i class="fa-solid fa-xmark"></i></span>
+            <h3 style="font-size: 16px; margin-bottom: 12px; color: #1e293b;">Scan QRIS</h3>
+            <img src="https://raw.githubusercontent.com/fasoleh7/Laporan-Harian/main/WhatsApp%20Image%202026-06-05%20at%2001.32.45.jpeg" alt="QRIS Donasi Besar">
+            
+            <a href="https://raw.githubusercontent.com/fasoleh7/Laporan-Harian/main/WhatsApp%20Image%202026-06-05%20at%2001.32.45.jpeg" download="QRIS-Donasi-Kreator.jpeg" class="btn-download-qris">
+                <i class="fa-solid fa-download"></i> Download QRIS
+            </a>
+        </div>
     </div>
 
     <script>
@@ -358,18 +380,14 @@
                     const tindakan = cleanText(item['Perbaikan Mesin']);
                     const teknisi = cleanText(item['Nama']); 
                     
-                    // AMBIL DATA SPAREPART DAN QTY
                     const sparepart = cleanText(item['Pergantian Spare Part']); 
-                    // Antisipasi header excel qty huruf besar/kecil
                     const qty = cleanText(item['QTY'] || item['Qty'] || item['qty']); 
                     
-                    // GABUNGKAN SPAREPART DAN QTY JIKA ADA
                     let detailSparepart = '-';
                     if (sparepart !== '-') {
                         detailSparepart = qty !== '-' ? `${sparepart} (QTY: ${qty})` : sparepart;
                     }
                     
-                    // WARNA STATUS
                     const statusVal = cleanText(item['Status'] || item['Statur']);
                     let statusBg = '#f1f5f9'; 
                     let statusColor = '#475569';
@@ -407,6 +425,23 @@
                 });
             } else {
                 riwayatContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-folder-open" style="font-size: 24px; color: #cbd5e1; margin-bottom: 8px; display: block;"></i>Belum ada riwayat perbaikan yang tercatat untuk mesin ini.</div>';
+            }
+        }
+
+        // FUNGSI UNTUK MENGATUR MODAL QRIS
+        function bukaModalQris() {
+            document.getElementById('modal-qris').classList.remove('hidden');
+        }
+
+        function tutupModalQris() {
+            document.getElementById('modal-qris').classList.add('hidden');
+        }
+
+        // Menutup modal jika klik di luar kotak (area gelap)
+        window.onclick = function(event) {
+            const modal = document.getElementById('modal-qris');
+            if (event.target === modal) {
+                tutupModalQris();
             }
         }
 
