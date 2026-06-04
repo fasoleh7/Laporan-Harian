@@ -13,36 +13,18 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
 
     <style>
-        :root {
-            --primary: #2563eb;
-            --primary-hover: #1d4ed8;
-            --bg-color: #f8fafc;
-            --card-bg: #ffffff;
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border-color: #e2e8f0;
-            --success: #10b981;
-        }
-
+        :root { --primary: #2563eb; --primary-hover: #1d4ed8; --bg-color: #f8fafc; --card-bg: #ffffff; --text-main: #1e293b; --text-muted: #64748b; --border-color: #e2e8f0; --success: #10b981; }
         * { box-sizing: border-box; font-family: 'Poppins', sans-serif; margin: 0; padding: 0; }
         body { background-color: var(--bg-color); color: var(--text-main); padding: 20px 15px; padding-bottom: 50px; }
         .container { max-width: 500px; margin: 0 auto; }
-
-        /* Header App */
         .app-header { text-align: center; margin-bottom: 24px; }
         .app-header h2 { font-size: 22px; font-weight: 700; color: var(--primary); display: flex; align-items: center; justify-content: center; gap: 8px; }
         .app-header p { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-
-        /* Card Style */
         .card { background: var(--card-bg); border-radius: 16px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05); padding: 24px; margin-bottom: 20px; border: 1px solid rgba(0,0,0,0.02); }
         .hidden { display: none !important; }
-
-        /* Scanner */
         #reader { border-radius: 12px; overflow: hidden; border: none !important; }
         #reader__dashboard_section_csr span { font-family: 'Poppins', sans-serif !important; }
         #reader button { background-color: var(--primary); color: white; border: none; padding: 8px 16px; border-radius: 8px; font-family: 'Poppins', sans-serif; cursor: pointer; margin-top: 10px; }
-
-        /* Manual Input */
         .manual-input-container { margin-top: 20px; padding-top: 20px; border-top: 1px dashed var(--border-color); }
         .manual-input-label { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; text-align: center; }
         .input-group { display: flex; gap: 10px; }
@@ -50,16 +32,11 @@
         .input-group input:focus { border-color: var(--primary); }
         .input-group button { background-color: var(--primary); color: white; border: none; padding: 0 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: 0.2s; }
         .input-group button:hover { background-color: var(--primary-hover); }
-
-        /* Info Grid */
         .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: var(--bg-color); padding: 15px; border-radius: 12px; margin-bottom: 20px; }
         .info-box { display: flex; flex-direction: column; }
         .info-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
         .info-value { font-size: 16px; font-weight: 700; color: var(--primary); }
-
         h3.section-title { font-size: 16px; font-weight: 600; margin-bottom: 16px; border-bottom: 2px solid var(--bg-color); padding-bottom: 8px; display: flex; align-items: center; gap: 8px; }
-
-        /* Timeline Riwayat */
         .timeline { position: relative; padding-left: 20px; }
         .timeline::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 2px; background: var(--border-color); border-radius: 2px; }
         .timeline-item { position: relative; margin-bottom: 24px; }
@@ -70,11 +47,7 @@
         .timeline-content p { margin-bottom: 6px; line-height: 1.5; }
         .timeline-meta { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--border-color); font-size: 11px; font-weight: 500; color: var(--text-muted); }
         .meta-item i { color: var(--primary); margin-right: 4px; }
-
-        /* Pesan Kosong */
         .empty-state { text-align: center; color: var(--text-muted); font-size: 13px; margin-top: 15px; padding: 20px; background: var(--bg-color); border-radius: 8px;}
-
-        /* Buttons */
         .btn-reset { display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; padding: 14px; background-color: var(--primary); color: white; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; margin-top: 25px; cursor: pointer; transition: all 0.2s; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2); }
         .btn-reset:hover { background-color: var(--primary-hover); transform: translateY(-2px); }
     </style>
@@ -89,7 +62,6 @@
 
         <div id="reader-card" class="card">
             <div id="reader" style="width: 100%;"></div>
-
             <div class="manual-input-container">
                 <p class="manual-input-label">Kamera bermasalah? Ketik kode manual:</p>
                 <div class="input-group">
@@ -113,8 +85,7 @@
             
             <h3 class="section-title"><i class="fa-solid fa-clock-rotate-left"></i> Riwayat Perbaikan</h3>
             
-            <div class="timeline" id="res-riwayat">
-                </div>
+            <div class="timeline" id="res-riwayat"></div>
 
             <button onclick="resetScanner()" class="btn-reset">
                 <i class="fa-solid fa-camera"></i> Cari Mesin Lainnya
@@ -123,70 +94,54 @@
     </div>
 
     <script>
-        // Link CSV Google Sheets 
         const sheetCSVUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQHsIF5lFos4c1YZF3dBwT5C61GH3ZYIdwYBte2TY79FQ3GfV7DEA5y3mti_kDPdA/pub?gid=348491996&single=true&output=csv";
 
         let html5QrcodeScanner = null;
         let dataMesinGlobal = []; 
 
-        // 1. Ambil Data
         function fetchDataFromSheet() {
             Papa.parse(sheetCSVUrl, {
                 download: true,
                 header: true,
                 complete: function(results) {
                     dataMesinGlobal = results.data;
-                    console.log("Data Sheet berhasil ditarik!");
                 }
             });
         }
 
-        // 2. Fungsi Scan Berhasil
-        function onScanSuccess(decodedText, decodedResult) {
+        function onScanSuccess(decodedText) {
             hentikanScanner();
             prosesDataScan(decodedText); 
         }
 
-        function onScanFailure(error) { /* Abaikan error */ }
+        function onScanFailure() { }
 
-        // 3. Mulai Kamera
         function mulaiScanner() {
             document.getElementById('reader-card').classList.remove('hidden');
             document.getElementById('result-card').classList.add('hidden');
             document.getElementById('manual-input').value = ''; 
             
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
+            html5QrcodeScanner = new Html5QrcodeScanner("reader", { fps: 10, qrbox: {width: 250, height: 250} }, false);
             html5QrcodeScanner.render(onScanSuccess, onScanFailure);
         }
 
-        // 4. Hentikan Kamera
         function hentikanScanner() {
             document.getElementById('reader-card').classList.add('hidden');
-            try {
-                if(html5QrcodeScanner) html5QrcodeScanner.clear();
-            } catch (e) { console.log(e); }
+            try { if(html5QrcodeScanner) html5QrcodeScanner.clear(); } catch (e) {}
         }
 
-        // 5. Fungsi Ketik Manual
         function cariManual() {
             const inputVal = document.getElementById('manual-input').value.trim();
-            if (!inputVal) {
-                alert("Silakan masukkan Nomor Mesin terlebih dahulu!");
-                return;
-            }
+            if (!inputVal) return alert("Silakan masukkan Nomor Mesin terlebih dahulu!");
             hentikanScanner();
             prosesDataScan(inputVal);
         }
 
-        // Enter keypress
         document.getElementById('manual-input').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') {
-                cariManual();
-            }
+            if (e.key === 'Enter') cariManual();
         });
 
-        // 6. Proses Data dengan Filter "Sapu Bersih"
+        // FILTER SUPER KETAT
         function prosesDataScan(qrText) {
             const riwayatMesinIni = dataMesinGlobal.filter(row => {
                 return row['NO. MESIN'] && row['NO. MESIN'].toUpperCase() === qrText.trim().toUpperCase();
@@ -194,20 +149,25 @@
 
             if (riwayatMesinIni.length > 0) {
                 
-                // Fungsi membersihkan teks dasar
-                const cleanText = (text) => {
-                    if (!text || text.trim() === '') return '-';
-                    return text;
-                };
+                const cleanText = (text) => (!text || text.trim() === '') ? '-' : text;
 
-                // FILTERING: Buang semua baris yang Uraian atau Tanggal-nya mengandung #N/A atau kosong
                 const validRiwayat = riwayatMesinIni.filter(item => {
-                    const uraian = item['URAIAN PEKERJAAN'] ? item['URAIAN PEKERJAAN'].toUpperCase() : '';
-                    const tanggal = item['TANGGAL'] ? item['TANGGAL'].toUpperCase() : '';
+                    // Gabungkan semua isi kolom untuk mengecek keberadaan error tersembunyi
+                    const semuaTeks = Object.values(item).join(' ').toUpperCase();
                     
-                    if (uraian.includes('#N/A') || tanggal.includes('#N/A') || uraian === '' || tanggal === '') {
+                    // Jika ada tulisan N/A, REF!, VALUE! dimana pun di baris itu, buang!
+                    if (semuaTeks.includes('#N/A') || semuaTeks.includes('#REF') || semuaTeks.includes('#VAL')) {
                         return false;
                     }
+
+                    // Cek juga apakah kolom Uraian atau Tanggal benar-benar kosong
+                    const tgl = item['TANGGAL'] ? item['TANGGAL'].trim() : '';
+                    const uraian = item['URAIAN PEKERJAAN'] ? item['URAIAN PEKERJAAN'].trim() : '';
+                    
+                    if (tgl === '' || uraian === '' || tgl === '-') {
+                        return false;
+                    }
+
                     return true;
                 });
 
@@ -219,35 +179,25 @@
                 
                 if (validRiwayat.length > 0) {
                     validRiwayat.forEach(item => {
-                        const hari = cleanText(item['HARI']);
-                        const tanggal = cleanText(item['TANGGAL']);
-                        const mulai = cleanText(item['MULAI']);
-                        const selesai = cleanText(item['SELESAI']);
-                        const kendala = cleanText(item['URAIAN PEKERJAAN']);
-                        const tindakan = cleanText(item['TINDAKAN PERBAIKAN']);
-                        const teknisi = cleanText(item['TEKNISI']);
-                        const sparepart = cleanText(item['NAMA SPAREPART']);
-
                         riwayatContainer.innerHTML += `
                             <div class="timeline-item">
                                 <div class="timeline-dot"></div>
                                 <div class="timeline-date">
-                                    <span><i class="fa-regular fa-calendar-days"></i> ${hari}, ${tanggal}</span>
-                                    <span><i class="fa-regular fa-clock"></i> ${mulai} - ${selesai}</span>
+                                    <span><i class="fa-regular fa-calendar-days"></i> ${cleanText(item['HARI'])}, ${cleanText(item['TANGGAL'])}</span>
+                                    <span><i class="fa-regular fa-clock"></i> ${cleanText(item['MULAI'])} - ${cleanText(item['SELESAI'])}</span>
                                 </div>
                                 <div class="timeline-content">
-                                    <p><strong>Kendala:</strong> ${kendala}</p>
-                                    <p><strong>Tindakan:</strong> ${tindakan}</p>
+                                    <p><strong>Kendala:</strong> ${cleanText(item['URAIAN PEKERJAAN'])}</p>
+                                    <p><strong>Tindakan:</strong> ${cleanText(item['TINDAKAN PERBAIKAN'])}</p>
                                     <div class="timeline-meta">
-                                        <div class="meta-item"><i class="fa-solid fa-user-wrench"></i> ${teknisi}</div>
-                                        <div class="meta-item"><i class="fa-solid fa-gear"></i> ${sparepart}</div>
+                                        <div class="meta-item"><i class="fa-solid fa-user-wrench"></i> ${cleanText(item['TEKNISI'])}</div>
+                                        <div class="meta-item"><i class="fa-solid fa-gear"></i> ${cleanText(item['NAMA SPAREPART'])}</div>
                                     </div>
                                 </div>
                             </div>
                         `;
                     });
                 } else {
-                    // Tampilan jika data mesin ada, tapi belum pernah rusak / laporannya #N/A semua
                     riwayatContainer.innerHTML = '<div class="empty-state"><i class="fa-solid fa-check-circle" style="font-size: 24px; color: var(--success); margin-bottom: 8px; display: block;"></i>Belum ada riwayat perbaikan yang tercatat untuk mesin ini.</div>';
                 }
 
@@ -256,10 +206,6 @@
                 alert(`Data tidak ditemukan! Mesin ${qrText.toUpperCase()} belum terdaftar di Laporan Harian.`);
                 resetScanner();
             }
-        }
-
-        function resetScanner() {
-            mulaiScanner();
         }
 
         window.onload = () => {
