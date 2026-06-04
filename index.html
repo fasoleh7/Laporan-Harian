@@ -97,9 +97,9 @@
         <div id="reader-card" class="card">
             <div id="reader" style="width: 100%;"></div>
             <div class="manual-input-container">
-                <p class="manual-input-label">Ketik ID Mesin atau Kode Mesin Lama/Baru:</p>
+                <p class="manual-input-label">Ketik ID Mesin atau No. Mesin:</p>
                 <div class="input-group">
-                    <input type="text" id="manual-input" placeholder="Contoh: P-070 atau D03" autocomplete="off">
+                    <input type="text" id="manual-input" placeholder="Contoh: P-070 atau C02" autocomplete="off">
                     <button onclick="cariManual()"><i class="fa-solid fa-magnifying-glass"></i> Cari</button>
                 </div>
             </div>
@@ -115,7 +115,7 @@
                     <span class="info-value" id="res-id-lokasi">-</span>
                 </div>
                 <div class="info-box">
-                    <span class="info-label">Kode (Baru/Lama)</span>
+                    <span class="info-label">Kode Mesin</span>
                     <span class="info-value" id="res-no-mesin">-</span>
                 </div>
                 <div class="info-box full">
@@ -172,7 +172,6 @@
                 transformHeader: function(h) { return h.trim(); }, // ANTI SPASI TERSESAT
                 complete: function(results) {
                     dataLaporanGlobal = results.data;
-                    console.log("Data Laporan Harian berhasil ditarik!");
                 }
             });
 
@@ -180,10 +179,9 @@
             Papa.parse(sheetMasterMesinUrl, {
                 download: true,
                 header: true,
-                transformHeader: function(h) { return h.trim(); }, // ANTI SPASI TERSESAT
+                transformHeader: function(h) { return h.trim(); }, 
                 complete: function(results) {
                     dataMasterGlobal = results.data;
-                    console.log("Data Master Mesin berhasil ditarik!");
                 }
             });
         }
@@ -227,7 +225,7 @@
             const searchText = qrText.trim().toUpperCase();
             const cleanText = (text) => (!text || text.trim() === '') ? '-' : text;
 
-            // 1. Cari Spesifikasi di Data Master (NIK_Mesin)
+            // 1. Cari Spesifikasi di Data Master (NIK_Mesin) - Bisa dari ID, Lama, atau Baru
             let infoMaster = null;
             if (dataMasterGlobal.length > 0) {
                 infoMaster = dataMasterGlobal.find(row => {
@@ -257,21 +255,18 @@
             if (infoMaster) {
                 document.getElementById('res-id-lokasi').innerText = cleanText(infoMaster['ID Lokasi']);
                 
-                let kodeBaru = cleanText(infoMaster['Baru']);
-                let kodeLama = cleanText(infoMaster['Lama']);
-                if (kodeBaru !== '-' && kodeLama !== '-') {
-                    document.getElementById('res-no-mesin').innerText = `${kodeBaru} (Lama: ${kodeLama})`;
-                } else {
-                    document.getElementById('res-no-mesin').innerText = kodeBaru !== '-' ? kodeBaru : kodeLama;
-                }
+                // HANYA TAMPILKAN KODE YANG BARU
+                document.getElementById('res-no-mesin').innerText = cleanText(infoMaster['Baru']);
                 
                 document.getElementById('res-nama').innerText = cleanText(infoMaster['Nama Mesin']);
                 document.getElementById('res-tonase').innerText = cleanText(infoMaster['Tonase']);
-                // Mengakomodasi kemungkinan nama header "Serial Number" atau "SN"
+                
+                // Mengakomodasi nama header "Serial Number" atau "SN"
                 const serialNum = infoMaster['Serial Number'] || infoMaster['SN'] || '-';
                 document.getElementById('res-sn').innerText = cleanText(serialNum);
                 document.getElementById('res-spesifikasi').innerText = cleanText(infoMaster['Spesifikasi']);
             } else {
+                // Fallback (jika data master gagal, setidaknya ambil dari riwayat harian)
                 document.getElementById('res-id-lokasi').innerText = cleanText(riwayatMentah[0]['ID Mesin']);
                 document.getElementById('res-no-mesin').innerText = cleanText(riwayatMentah[0]['No. Mesin']);
                 document.getElementById('res-nama').innerText = cleanText(riwayatMentah[0]['Nama Mesin']);
